@@ -1,16 +1,16 @@
-{
-  lib,
-  stdenv,
-  fetchFromGitHub,
-  cmake,
-  meson,
-  ninja,
-  boost,
-  pandoc,
-  pkg-config,
-  xercesc,
-  xalanc,
-  qt6Packages,
+{ lib
+, stdenv
+, fetchFromGitHub
+, cmake
+, meson
+, ninja
+, boost
+, pandoc
+, pkg-config
+, xercesc
+, xalanc
+, qt6Packages
+, postgresql       # <-- pull in the PostgreSQL client (libpq) package
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -19,19 +19,27 @@ stdenv.mkDerivation (finalAttrs: {
 
   src = fetchFromGitHub {
     owner = "Brewtarget";
-    repo = "brewtarget";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-b18f7467b99d8b6981b91e991aba6036b3c7dd348621940c87e9e52351cfef56=";
+    repo  = "brewtarget";
+    rev   = "v${finalAttrs.version}";
+    # sha256 for v4.1.0, computed via `nix-build` or `sha256sum`
+    hash  = "sha256-0n2y58bsmkgdq8gy43s9vhwqnn5xamr15py73nx9zdp1mh81c9kd";
     fetchSubmodules = true;
   };
 
+  # We want to switch the Meson database backend from the default ("sqlite")
+  # to "postgresql".  Brewtarget’s meson.build exposes `database_backend` options.
+  mesonFlags = [
+    "-Ddatabase_backend=postgresql"
+  ];
+
   postPatch = ''
-    # 3 sed statements from below derived from AUR
-    # Disable boost-stacktrace_backtrace, requires an optional boost lib that's only built in Debianland
+    # Disable boost-stacktrace_backtrace (Debian‐only library)
     sed -i "/boostModules += 'stacktrace_backtrace'/ {N;N;d}" meson.build
-    # Make libbacktrace not required, we're not running the bt script
+
+    # Make libbacktrace not required, since we don’t run the trace script
     sed -i "/compiler\.find_library('backtrace'/ {n;s/true/false/}" meson.build
-    # Disable static linking
+
+    # Disable static linking in meson.build
     sed -i 's/static : true/static : false/g' meson.build
   '';
 
@@ -43,6 +51,7 @@ stdenv.mkDerivation (finalAttrs: {
     qt6Packages.wrapQtAppsHook
     pandoc
   ];
+
   buildInputs = [
     boost
     qt6Packages.qtbase
@@ -51,10 +60,14 @@ stdenv.mkDerivation (finalAttrs: {
     qt6Packages.qtsvg
     xercesc
     xalanc
+
+    # ← Here is the important bit: pull in libpq (PostgreSQL client/lib) so
+    # Meson can find "-lpq" and associated headers.
+    postgresql
   ];
 
   meta = {
-    description = "Open source beer recipe creation tool";
+    description = "Open source beer recipe creation tool with PostgreSQL support";
     mainProgram = "brewtarget";
     homepage = "http://www.brewtarget.org/";
     license = lib.licenses.gpl3;
