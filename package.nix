@@ -21,7 +21,7 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "Brewtarget";
     repo = "brewtarget";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-bJMKmOSoL7mzV7G87O2w1WFWmwRetXa8fUkfLIM5Qwk=";
+    hash = "sha256-b18f7467b99d8b6981b91e991aba6036b3c7dd348621940c87e9e52351cfef56=";
     fetchSubmodules = true;
   };
 
